@@ -35,18 +35,17 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
   //TODO: get user playlists
   const playlist = Playlist.aggregate([
     {
-        $match: {
-            _id: new mongoose.Types.ObjectId(userId)
-        }
+      $match: {
+        _id: new mongoose.Types.ObjectId(userId),
+      },
     },
     {
-        $lookup: {
-            from: "users",
-            localField: ""
-        }
-    }
-  ]) 
-
+      $lookup: {
+        from: "users",
+        localField: "",
+      },
+    },
+  ]);
 });
 
 const getPlaylistById = asyncHandler(async (req, res) => {
@@ -72,12 +71,56 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 });
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
-  const { playlistId, videoId } = req.params;
+  // TODO: add video to playlist
+  try {
+    const { playlistId, videoId } = req.params;
+
+    const playlist = await Playlist.findById(playlistId);
+
+    if (!playlist) {
+      throw new ApiError(404, "Playlist not found");
+    }
+
+    if (!playlist.videos.includes(videoId)) {
+      playlist.videos.push(videoId);
+      await playlist.save();
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, playlist, "Video added to playlist successfully")
+      );
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong while adding video to playlist"
+    );
+  }
 });
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-  const { playlistId, videoId } = req.params;
   // TODO: remove video from playlist
+  try {
+    const { playlistId, videoId } = req.params;
+
+    const playlist = await Playlist.findById(playlistId);
+
+    if (!playlist) {
+      throw new ApiError(404, "Playlist not found");
+    }
+
+    if (!playlist.videos.includes(videoId)) {
+      throw new ApiError(404, "Video not found in playlist");
+    }
+
+    playlist.videos.remove(videoId);
+    await playlist.save();
+
+    return res.status(200).json(new ApiResponse(200, playlist, "Video removed from playlist successfully"))
+  } catch (error) {
+    throw new ApiError(500, error?.message || "Something went wrong while removing video from playlist")
+  }
 });
 
 const deletePlaylist = asyncHandler(async (req, res) => {
@@ -121,12 +164,17 @@ const updatePlaylist = asyncHandler(async (req, res) => {
           description,
         },
       },
-      {new: true }
+      { new: true }
     );
 
-    return res.status(200).json(new ApiResponse(200, playlist, "Playlist updated successfully"))
+    return res
+      .status(200)
+      .json(new ApiResponse(200, playlist, "Playlist updated successfully"));
   } catch (error) {
-    throw new ApiError(500, error?.message || "Something went wrong while updating playlist")
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong while updating playlist"
+    );
   }
 });
 
