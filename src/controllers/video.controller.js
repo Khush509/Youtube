@@ -30,6 +30,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
 const publishAVideo = asyncHandler(async (req, res) => {
   try {
     const { title, description } = req.body;
+    const owner = await req.user._id
 
     if ([title, description].some((field) => field?.trim() === "")) {
       //Check for empty fields
@@ -50,7 +51,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     const videoFile = await uploadOnCloudinary(videoLocalPath); // upload videoFile on cloudinary
     const thumbnail = await uploadOnCloudinary(thumbnailPath); // upload thumbnail on cloudinary
-    console.log(videoFile);
+    // console.log(videoFile);
 
     if (!videoFile.url) {
       throw new ApiError(400, "Video File is required");
@@ -71,6 +72,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
       thumbnail: thumbnail?.url,
       duration,
       isPublished,
+      owner
     });
 
     return res

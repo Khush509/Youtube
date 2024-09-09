@@ -8,7 +8,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
   //TODO: create playlist
   try {
     const { name, description } = req.body;
-    console.log(req.body);
+    const owner = await req.user._id
 
     if ([name, description].some((field) => field?.trim() === "")) {
       throw new ApiError(400, "All fileds are required");
@@ -17,6 +17,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
     const playlist = await Playlist.create({
       name,
       description,
+      owner
     });
 
     return res
@@ -31,21 +32,30 @@ const createPlaylist = asyncHandler(async (req, res) => {
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
   //TODO: get user playlists
-  const playlist = Playlist.aggregate([
-    {
-      $match: {
-        _id: new mongoose.Types.ObjectId(userId),
+  try {
+    const { userId } = req.params;
+  
+    const playlist = await Playlist.aggregate([
+      {
+        $match: {
+          owner: new mongoose.Types.ObjectId(userId)
+        }
       },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "",
-      },
-    },
-  ]);
+      {
+        $project: {
+          _id: 1,
+          name:1,
+          createdAt:1
+        }
+      }
+    ])
+    
+    return res.status(200).json(new ApiResponse(200, {Playlists: playlist}, "User playlist fetched successfully"))
+  } catch (error) {
+    throw new ApiError(500, error?.message || "Something went wrong while fetching user playlist")
+  }
+  
 });
 
 const getPlaylistById = asyncHandler(async (req, res) => {
